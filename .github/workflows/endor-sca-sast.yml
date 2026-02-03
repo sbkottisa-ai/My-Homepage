@@ -31,17 +31,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Optional: add your language-specific build/install steps here
-      # For example, for a Node/JS app:
-      # - name: Set up Node.js
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: "20"
-      #
-      # - name: Install dependencies
-      #   run: |
-      #     corepack enable
-      #     pnpm install --frozen-lockfile
+      # NEW: make sure pnpm exists on the host and install deps
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm and project dependencies
+        run: |
+          npm install -g pnpm
+          pnpm install --frozen-lockfile
 
       # PR scans – incremental, with PR comments
       - name: Endor Labs Scan - Pull Request
