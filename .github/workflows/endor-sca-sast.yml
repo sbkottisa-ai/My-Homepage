@@ -1,0 +1,77 @@
+name: Endor Labs - SCA and SAST
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  endor-scan:
+    name: Endor Labs SCA + SAST
+    runs-on: ubuntu-latest
+
+    # Permissions required by the Endor Labs example:
+    # - OIDC for keyless auth
+    # - PR comments
+    # - SARIF upload to GitHub Security
+    permissions:
+      security-events: write   # upload SARIF to GitHub
+      contents: read           # checkout private repos
+      actions: read            # needed for SARIF upload in private repos
+      id-token: write          # GitHub OIDC → keyless auth with Endor
+      pull-requests: write     # comment on PRs for violations
+
+    env:
+      # TODO: set this to your Endor Labs tenant namespace
+      ENDOR_NAMESPACE: "your-endor-namespace"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Optional: add your language-specific build/install steps here
+      # For example, for a Node/JS app:
+      # - name: Set up Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: "20"
+      #
+      # - name: Install dependencies
+      #   run: |
+      #     corepack enable
+      #     pnpm install --frozen-lockfile
+
+      # PR scans – incremental, with PR comments
+      - name: Endor Labs Scan - Pull Request
+        if: github.event_name == 'pull_request'
+        uses: endorlabs/github-action@v1  # replace v1 with pinned commit SHA
+        with:
+          namespace: ${{ env.ENDOR_NAMESPACE }}
+          scan_dependencies: true      # SCA
+          scan_sast: true              # SAST
+          pr: true                     # mark this as a PR/incremental scan
+          enable_pr_comments: true     # write review comments on PRs
+          scan_summary_output_type: 'table'
+          sarif_file: 'endor-findings.sarif'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Push scans on main – monitored/baseline version for dashboards
+      - name: Endor Labs Scan - Push to main
+        if: github.event_name == 'push'
+        uses: endorlabs/github-action@v1  # replace v1 with pinned commit SHA
+        with:
+          namespace: ${{ env.ENDOR_NAMESPACE }}
+          scan_dependencies: true      # SCA
+          scan_sast: true              # SAST
+          pr: false                    # monitored/baseline scan for main
+          scan_summary_output_type: 'table'
+          sarif_file: 'endor-findings.sarif'
+
+      # Optional: upload SARIF into GitHub Advanced Security
+      - name: Upload findings to GitHub Security
+        if: always() && github.event_name == 'push'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'endor-findings.sarif'
