@@ -25,7 +25,7 @@ jobs:
 
     env:
       # TODO: set this to your Endor Labs tenant namespace
-      ENDOR_NAMESPACE: "your-endor-namespace"
+      ENDOR_NAMESPACE: "sai-learn"
 
     steps:
       - name: Checkout repository
